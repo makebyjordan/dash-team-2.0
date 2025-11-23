@@ -1,0 +1,5 @@
+{
+  "name": "InvoDash - Management Dashboard",
+  "description": "A modern, dark-themed dashboard for managing invoices, inventory, and clients, inspired by the Polysure UI. This is a frontend-only application built with React and Tailwind CSS, featuring interactive charts and a responsive layout.",
+  "requestFramePermissions": []
+}
