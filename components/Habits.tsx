@@ -30,19 +30,19 @@ const Habits: React.FC = () => {
 
   return (
     <div className="p-8">
-      <h2 className="text-3xl font-bold text-white mb-6">Hábitos</h2>
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Hábitos</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Create Habit Form */}
         <div className="lg:col-span-1">
-          <div className="bg-[#27273F] p-6 rounded-2xl shadow-lg">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <PlusIcon className="w-5 h-5 text-yellow-400" />
+          <div className="bg-white dark:bg-[#27273F] p-6 rounded-2xl shadow-lg transition-colors duration-300">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <PlusIcon className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
               Crear Nuevo Hábito
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="habit-title" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="habit-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Título
                 </label>
                 <input
@@ -50,19 +50,19 @@ const Habits: React.FC = () => {
                   id="habit-title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-[#1C1C2E] border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow"
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow"
                   placeholder="Ej: Leer 30 minutos"
                 />
               </div>
               <div>
-                <label htmlFor="habit-content" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="habit-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Contenido (pegar texto con formato)
                 </label>
                 <div
                   ref={contentEditableRef}
                   contentEditable
                   onInput={(e) => setContent(e.currentTarget.innerHTML)}
-                  className="w-full bg-[#1C1C2E] border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow min-h-[200px] max-h-[400px] overflow-y-auto empty:before:content-[attr(data-placeholder)] empty:before:text-gray-500"
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-shadow min-h-[200px] max-h-[400px] overflow-y-auto empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500"
                   data-placeholder="Pega aquí el texto de la web..."
                   style={{ whiteSpace: 'pre-wrap' }}
                 />
@@ -80,14 +80,14 @@ const Habits: React.FC = () => {
 
         {/* Habits List */}
         <div className="lg:col-span-2">
-          <div className="bg-[#27273F] p-6 rounded-2xl shadow-lg min-h-[500px]">
-            <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <ChecklistIcon className="w-5 h-5 text-purple-400" />
+          <div className="bg-white dark:bg-[#27273F] p-6 rounded-2xl shadow-lg min-h-[500px] transition-colors duration-300">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <ChecklistIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               Mis Hábitos
             </h3>
             
             {habits.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <p>No hay hábitos creados aún.</p>
                 <p className="text-sm mt-2">Usa el formulario para agregar uno nuevo.</p>
               </div>
@@ -97,19 +97,19 @@ const Habits: React.FC = () => {
                   <div
                     key={habit.id}
                     onClick={() => setSelectedHabit(habit)}
-                    className="bg-[#1C1C2E] p-4 rounded-xl cursor-pointer hover:bg-[#2C2C3E] transition-all border border-transparent hover:border-yellow-400/50 group"
+                    className="bg-gray-50 dark:bg-[#1C1C2E] p-4 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2C2C3E] transition-all border border-gray-200 dark:border-transparent hover:border-yellow-400/50 group"
                   >
-                    <h4 className="font-bold text-lg text-white mb-2 group-hover:text-yellow-400 transition-colors">
+                    <h4 className="font-bold text-lg text-gray-900 dark:text-white mb-2 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
                       {habit.title}
                     </h4>
                     <div 
-                      className="text-gray-400 text-sm line-clamp-3 mb-3"
+                      className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-3"
                       // Simple strip tags for preview
                       dangerouslySetInnerHTML={{ __html: habit.content.replace(/<[^>]*>?/gm, ' ').substring(0, 150) + '...' }}
                     />
                     <div className="text-xs text-gray-500 flex justify-between items-center">
                       <span>{new Date(habit.createdAt).toLocaleDateString()}</span>
-                      <span className="text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-yellow-600 dark:text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity">
                         Ver detalles →
                       </span>
                     </div>
@@ -123,31 +123,31 @@ const Habits: React.FC = () => {
 
       {/* Detail Modal */}
       {selectedHabit && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedHabit(null)}>
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedHabit(null)}>
           <div 
-            className="bg-[#27273F] text-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" 
+            className="bg-white dark:bg-[#27273F] text-gray-900 dark:text-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col transition-colors duration-300" 
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center p-6 border-b border-gray-700">
-              <h2 className="text-2xl font-bold text-white">{selectedHabit.title}</h2>
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-2xl font-bold">{selectedHabit.title}</h2>
               <button 
                 onClick={() => setSelectedHabit(null)}
-                className="text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700 p-2 rounded-lg transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-lg transition-colors"
               >
                 <XIcon className="w-6 h-6" />
               </button>
             </div>
             
             <div className="p-8 overflow-y-auto custom-scrollbar">
-              <div className="prose prose-invert max-w-none">
+              <div className="prose dark:prose-invert max-w-none">
                 <div 
-                  className="text-gray-300 leading-relaxed text-lg [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-5 [&_p]:mb-4 [&_a]:text-yellow-400 [&_a]:underline [&_strong]:text-white [&_b]:text-white [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-yellow-400 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:rounded-lg [&_img]:max-w-full"
+                  className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-5 [&_p]:mb-4 [&_a]:text-yellow-600 dark:[&_a]:text-yellow-400 [&_a]:underline [&_strong]:text-gray-900 dark:[&_strong]:text-white [&_b]:text-gray-900 dark:[&_b]:text-white [&_li]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-yellow-400 [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:rounded-lg [&_img]:max-w-full"
                   dangerouslySetInnerHTML={{ __html: selectedHabit.content }}
                 />
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-700 bg-[#1C1C2E]/50 rounded-b-2xl">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1C1C2E]/50 rounded-b-2xl">
               <p className="text-sm text-gray-500">
                 Creado el {new Date(selectedHabit.createdAt).toLocaleString()}
               </p>

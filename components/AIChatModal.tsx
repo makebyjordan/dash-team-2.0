@@ -144,27 +144,27 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose, curre
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-[#27273F] w-full max-w-lg h-[80vh] sm:h-[600px] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col border border-gray-700">
+    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white dark:bg-[#27273F] w-full max-w-lg h-[80vh] sm:h-[600px] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-700 bg-[#1C1C2E] rounded-t-2xl">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1C1C2E] rounded-t-2xl">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             ✨ Asistente IA TimeGestion
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <XIcon className="w-6 h-6" />
           </button>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#1C1C2E]/50">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-gray-50 dark:bg-[#1C1C2E]/50">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
                 msg.role === 'user' 
                   ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-[#27273F] border border-gray-700 text-gray-200 rounded-bl-none'
+                  : 'bg-white dark:bg-[#27273F] border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-bl-none shadow-sm'
               }`}>
                 {msg.content}
               </div>
@@ -172,7 +172,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose, curre
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-[#27273F] border border-gray-700 rounded-2xl px-4 py-3 rounded-bl-none flex items-center gap-2">
+              <div className="bg-white dark:bg-[#27273F] border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 rounded-bl-none flex items-center gap-2 shadow-sm">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
@@ -183,7 +183,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose, curre
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-[#1C1C2E] border-t border-gray-700 rounded-b-2xl">
+        <div className="p-4 bg-gray-50 dark:bg-[#1C1C2E] border-t border-gray-200 dark:border-gray-700 rounded-b-2xl">
           <div className="flex gap-2">
             <input
               type="text"
@@ -191,7 +191,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose, curre
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ej: Cambia la rutina de los sábados, quita..."
-              className="flex-1 bg-[#27273F] border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 placeholder-gray-500"
+              className="flex-1 bg-white dark:bg-[#27273F] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 placeholder-gray-500"
             />
             <button 
               onClick={handleSend}
