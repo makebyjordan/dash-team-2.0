@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlusIcon } from './icons';
 
 interface Contact {
@@ -31,6 +31,8 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [addingToFollowup, setAddingToFollowup] = useState(false);
 
   useEffect(() => {
     fetchContacts();
@@ -114,6 +116,38 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
     }
   };
 
+  const handleAddToFollowup = async (contact: Contact) => {
+    try {
+      setAddingToFollowup(true);
+      const response = await fetch('/api/followups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactId: contact.id,
+          contactName: contact.name,
+          contactEmail: contact.email,
+          contactPhone: contact.phone,
+          contactCompany: contact.company,
+          section: 'list',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al añadir a seguimientos');
+      }
+
+      alert(`✅ ${contact.name} añadido a Seguimientos > Lista`);
+      setOpenMenuId(null);
+    } catch (error: any) {
+      console.error('Error adding to followup:', error);
+      alert('Error al añadir a seguimientos');
+    } finally {
+      setAddingToFollowup(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -191,8 +225,8 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
           <p className="text-gray-500 dark:text-gray-400">{emptyMessage}</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#27273F] rounded-2xl shadow-sm border border-gray-200 dark:border-none overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white dark:bg-[#27273F] rounded-2xl shadow-sm border border-gray-200 dark:border-none overflow-visible pb-32">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-left">
               <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300">
                 <tr>
@@ -264,6 +298,43 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
+                        
+                        {/* Menú de tres puntos */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setOpenMenuId(openMenuId === contact.id ? null : contact.id)}
+                            className={`p-2 rounded-lg transition-all duration-200 ${
+                              openMenuId === contact.id
+                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+                            }`}
+                            title="Más acciones"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+
+                          {openMenuId === contact.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
+                              <div className="absolute right-0 mt-2 w-56 bg-white/95 dark:bg-[#1C1C2E]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-600/50 z-50 overflow-hidden">
+                                <div className="py-2">
+                                  <button
+                                    onClick={() => handleAddToFollowup(contact)}
+                                    disabled={addingToFollowup}
+                                    className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center space-x-3 disabled:opacity-50"
+                                  >
+                                    <span className="text-xl">📝</span>
+                                    <span>Añadir a Seguimientos</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

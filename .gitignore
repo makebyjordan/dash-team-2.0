@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Next.js build output
+.next
+out
+
+# Imágenes grandes o carpetas públicas pesadas (Opcional, si tienes vídeos)
+# public/videos

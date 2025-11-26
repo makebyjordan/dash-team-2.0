@@ -10,11 +10,12 @@ import { GSheetsView } from '@/components/GSheetsView';
 import { ConnectionsView } from '@/components/ConnectionsView';
 import { ContactsView } from '@/components/ContactsView';
 import { ClientsListView } from '@/components/ClientsListView';
+import { FollowupListView } from '@/components/FollowupListView';
 import { AIChatModal } from '@/components/AIChatModal';
 import { initialBattlePlan, BattlePlanDay, routineWar, routineRegen } from '@/data/initialTimeGestionData';
 import { loadBattlePlans, saveBattlePlan } from '@/lib/battleplan-helpers';
 import {
-    DashboardIcon, PolicyIcon, SettingsIcon, LogoutIcon, SearchIcon, NotificationIcon, PlusIcon, LogoIcon, XIcon, ChecklistIcon, CalendarIcon, SparklesIcon, SunIcon, MoonIcon, ChevronRightIcon, ChevronDownIcon
+    DashboardIcon, PolicyIcon, SettingsIcon, LogoutIcon, SearchIcon, NotificationIcon, PlusIcon, LogoIcon, XIcon, ChecklistIcon, CalendarIcon, SparklesIcon, SunIcon, MoonIcon, ChevronRightIcon, ChevronDownIcon, StatisticsIcon
 } from '@/components/icons';
 import { translations } from '@/translations';
 
@@ -157,7 +158,7 @@ const Sidebar: React.FC<{
   t: TranslatedTexts;
   onLogout: () => void;
 }> = ({ activeView, setActiveView, onAddNewInvoice, t, onLogout }) => {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mycalendar', 'connections', 'contacts']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mycalendar', 'connections', 'contacts', 'followups']));
 
   const toggleSection = (id: string) => {
     const newExpanded = new Set(expandedSections);
@@ -197,8 +198,21 @@ const Sidebar: React.FC<{
         { id: 'interested', label: 'Interesados', icon: <DashboardIcon className="w-5 h-5"/> },
         { id: 'tocontact', label: 'Contactar', icon: <DashboardIcon className="w-5 h-5"/> }
       ]
+    },
+    {
+      id: 'followups',
+      label: 'Seguimientos',
+      icon: <StatisticsIcon className="w-5 h-5"/>,
+      children: [
+        { id: 'urgent', label: 'Urgente', icon: <DashboardIcon className="w-5 h-5"/> },
+        { id: 'list', label: 'Lista', icon: <DashboardIcon className="w-5 h-5"/> },
+        { id: 'calendar', label: 'Calendario', icon: <CalendarIcon className="w-5 h-5"/> },
+        { id: 'checks', label: 'Checks', icon: <ChecklistIcon className="w-5 h-5"/> }
+      ]
     }
   ];
+
+  const showNewConnection = activeView === 'connections';
 
   return (
     <aside className="w-64 bg-white dark:bg-[#27273F] text-gray-900 dark:text-white p-6 flex-shrink-0 flex flex-col min-h-screen border-r border-gray-200 dark:border-none">
@@ -221,18 +235,20 @@ const Sidebar: React.FC<{
         </ul>
       </nav>
 
-      <div className="bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6">
-        <div className="w-16 h-16 bg-purple-200 dark:bg-purple-500/50 rounded-full mx-auto flex items-center justify-center -mt-10 mb-4">
-            <PlusIcon className="w-8 h-8 text-purple-700 dark:text-white"/>
+      {showNewConnection && (
+        <div className="bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6 animate-fade-in">
+          <div className="w-16 h-16 bg-purple-200 dark:bg-purple-500/50 rounded-full mx-auto flex items-center justify-center -mt-10 mb-4">
+              <PlusIcon className="w-8 h-8 text-purple-700 dark:text-white"/>
+          </div>
+          <p className="font-semibold mb-2">Nueva Conexión</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Conecta tu nueva conexión para poder visualizarla aquí.</p>
+          <button
+              onClick={onAddNewInvoice}
+              className="bg-gray-900 dark:bg-white text-white dark:text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200">
+              Conectar
+          </button>
         </div>
-        <p className="font-semibold mb-2">Nueva Conexión</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Conecta tu nueva conexión para poder visualizarla aquí.</p>
-        <button
-            onClick={onAddNewInvoice}
-            className="bg-gray-900 dark:bg-white text-white dark:text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200">
-            Conectar
-        </button>
-      </div>
+      )}
 
       <div>
          <button className="w-full flex items-center space-x-4 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent rounded-lg">
@@ -550,6 +566,7 @@ export default function DashboardApp() {
             error={gsheetError}
             onConnect={() => setIsModalOpen(true)}
             onDisconnect={handleDisconnectSheet}
+            onSync={syncSheetData}
           />
         );
       case 'contacts':
@@ -560,6 +577,16 @@ export default function DashboardApp() {
         return <ClientsListView contactType="INTERESTED" title="Interesados" emptyMessage="No hay interesados registrados aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
       case 'tocontact':
         return <ClientsListView contactType="TO_CONTACT" title="Por Contactar" emptyMessage="No hay contactos por llamar aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
+      case 'followups':
+        return <PlaceholderView title="Seguimientos" t={t} />;
+      case 'urgent':
+        return <PlaceholderView title="Urgente" t={t} />;
+      case 'list':
+        return <FollowupListView />;
+      case 'calendar':
+        return <PlaceholderView title="Calendario" t={t} />;
+      case 'checks':
+        return <PlaceholderView title="Checks" t={t} />;
       default:
         return <Dashboard />;
     }

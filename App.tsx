@@ -206,8 +206,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onAddNewIn
         { id: 'interested', label: 'Interesados', icon: <DashboardIcon className="w-5 h-5"/> },
         { id: 'tocontact', label: 'Contactar', icon: <DashboardIcon className="w-5 h-5"/> }
       ]
+    },
+    {
+      id: 'followups',
+      label: 'Seguimientos',
+      icon: <StatisticsIcon className="w-5 h-5"/>,
     }
   ];
+
+  const showNewConnection = activeView === 'connections';
 
   return (
     <aside className="w-64 bg-white dark:bg-[#27273F] text-gray-900 dark:text-white p-6 flex-shrink-0 flex flex-col min-h-screen border-r border-gray-200 dark:border-none transition-colors duration-300">
@@ -230,18 +237,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onAddNewIn
         </ul>
       </nav>
 
-      <div className="bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6 transition-colors duration-300">
-        <div className="w-16 h-16 bg-purple-200 dark:bg-purple-500/50 rounded-full mx-auto flex items-center justify-center -mt-10 mb-4">
-            <PlusIcon className="w-8 h-8 text-purple-700 dark:text-white"/>
+      {showNewConnection && (
+        <div className="bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6 transition-colors duration-300 animate-fade-in">
+          <div className="w-16 h-16 bg-purple-200 dark:bg-purple-500/50 rounded-full mx-auto flex items-center justify-center -mt-10 mb-4">
+              <PlusIcon className="w-8 h-8 text-purple-700 dark:text-white"/>
+          </div>
+          <p className="font-semibold mb-2 text-gray-900 dark:text-white">Nueva Conexión</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Conecta tu nueva conexión para poder visualizarla aquí.</p>
+          <button
+              onClick={onAddNewInvoice}
+              className="bg-gray-900 dark:bg-white text-white dark:text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors">
+              Conectar
+          </button>
         </div>
-        <p className="font-semibold mb-2 text-gray-900 dark:text-white">Nueva Conexión</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Conecta tu nueva conexión para poder visualizarla aquí.</p>
-        <button
-            onClick={onAddNewInvoice}
-            className="bg-gray-900 dark:bg-white text-white dark:text-black font-bold py-2 px-6 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-200 transition-colors">
-            Conectar
-        </button>
-      </div>
+      )}
 
       <div>
          <button className="w-full flex items-center space-x-4 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent transition-colors rounded-lg">
@@ -563,6 +572,8 @@ const App: React.FC = () => {
         return <ClientsListView contactType="INTERESTED" title="Interesados" emptyMessage="No hay interesados registrados aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
       case 'tocontact':
         return <ClientsListView contactType="TO_CONTACT" title="Por Contactar" emptyMessage="No hay contactos por llamar aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
+      case 'followups':
+        return <PlaceholderView title="Seguimientos" t={t} />;
       default:
         return <Dashboard />;
     }
