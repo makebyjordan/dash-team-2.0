@@ -11,6 +11,7 @@ import { ConnectionsView } from '@/components/ConnectionsView';
 import { ContactsView } from '@/components/ContactsView';
 import { ClientsListView } from '@/components/ClientsListView';
 import { FollowupListView } from '@/components/FollowupListView';
+import { FollowupCalendarView } from '@/components/FollowupCalendarView';
 import { AIChatModal } from '@/components/AIChatModal';
 import { initialBattlePlan, BattlePlanDay, routineWar, routineRegen } from '@/data/initialTimeGestionData';
 import { loadBattlePlans, saveBattlePlan } from '@/lib/battleplan-helpers';
@@ -158,7 +159,7 @@ const Sidebar: React.FC<{
   t: TranslatedTexts;
   onLogout: () => void;
 }> = ({ activeView, setActiveView, onAddNewInvoice, t, onLogout }) => {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['mycalendar', 'connections', 'contacts', 'followups']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (id: string) => {
     const newExpanded = new Set(expandedSections);
@@ -339,7 +340,7 @@ export default function DashboardApp() {
   const [baseRoutineRegen, setBaseRoutineRegen] = useState<string[]>(routineRegen);
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const t = translations['es'];
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [connectedSheets, setConnectedSheets] = useState<{ id: string; name: string; data: string[][] }[]>([]);
   const [gsheetLoading, setGsheetLoading] = useState(false);
   const [gsheetError, setGsheetError] = useState<string | null>(null);
@@ -580,13 +581,13 @@ export default function DashboardApp() {
       case 'followups':
         return <PlaceholderView title="Seguimientos" t={t} />;
       case 'urgent':
-        return <PlaceholderView title="Urgente" t={t} />;
+        return <FollowupListView section="urgent" title="Urgente" icon="🚨" />;
       case 'list':
-        return <FollowupListView />;
+        return <FollowupListView section="list" title="Lista de Seguimientos" icon="📝" />;
       case 'calendar':
-        return <PlaceholderView title="Calendario" t={t} />;
+        return <FollowupCalendarView />;
       case 'checks':
-        return <PlaceholderView title="Checks" t={t} />;
+        return <FollowupListView section="checks" title="Checks" icon="✅" />;
       default:
         return <Dashboard />;
     }

@@ -192,11 +192,25 @@ model Followup {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checklist     ChecklistItem[]
 
   @@index([userId])
   @@index([section])
   @@index([completed])
+}
+
+model ChecklistItem {
+  id          String    @id @default(cuid())
+  followupId  String
+  content     String
+  completed   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  followup    Followup  @relation(fields: [followupId], references: [id], onDelete: Cascade)
+
+  @@index([followupId])
 }
 
 enum FollowupSection {

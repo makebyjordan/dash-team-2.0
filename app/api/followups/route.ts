@@ -10,7 +10,7 @@ const followupSchema = z.object({
   contactPhone: z.string().nullable().optional(),
   contactCompany: z.string().nullable().optional(),
   section: z.enum(['urgent', 'list', 'calendar', 'checks']),
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   dueDate: z.string().datetime().optional(),
 })
 
