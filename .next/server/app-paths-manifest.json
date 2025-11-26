@@ -1,7 +1,18 @@
 {
-  "/api/sheets/route": "app/api/sheets/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/battleplans/route": "app/api/battleplans/route.js",
-  "/api/followups/route": "app/api/followups/route.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/checklist/[itemId]/route": "app/api/checklist/[itemId]/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/contacts/[id]/route": "app/api/contacts/[id]/route.js",
+  "/api/contacts/route": "app/api/contacts/route.js",
+  "/api/followups/[id]/checklist/route": "app/api/followups/[id]/checklist/route.js",
+  "/api/followups/[id]/route": "app/api/followups/[id]/route.js",
+  "/api/followups/route": "app/api/followups/route.js",
+  "/api/habits/[id]/route": "app/api/habits/[id]/route.js",
+  "/api/habits/route": "app/api/habits/route.js",
+  "/api/sheets/route": "app/api/sheets/route.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/register/page": "app/register/page.js"
 }

@@ -122,6 +122,80 @@ export const FollowupListView: React.FC<FollowupListViewProps> = ({
     }
   };
 
+  const handleSaveChecklistToChecks = async () => {
+    if (!checklistFollowup || checklistItems.length === 0) return;
+    
+    try {
+      setIsSaving(true);
+      
+      // 1. Crear el followup en la sección Checks
+      const response = await fetch('/api/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactId: checklistFollowup.contactId,
+          contactName: checklistFollowup.contactName,
+          contactEmail: checklistFollowup.contactEmail,
+          contactPhone: checklistFollowup.contactPhone,
+          contactCompany: checklistFollowup.contactCompany,
+          section: 'checks',
+          notes: checklistFollowup.notes,
+        }),
+      });
+
+      if (response.ok) {
+        const newFollowup = await response.json();
+        
+        // 2. Copiar todos los items de la checklist al nuevo followup en Checks
+        for (const item of checklistItems) {
+          await fetch(`/api/followups/${newFollowup.id}/checklist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              content: item.content,
+              completed: item.completed 
+            }),
+          });
+        }
+        
+        alert('✅ Checklist guardada y contacto añadido a Checks');
+        setChecklistFollowup(null);
+      } else {
+        // Si ya existe, intentamos obtener el followup existente y actualizar su checklist
+        const existingResponse = await fetch(`/api/followups?section=checks`);
+        if (existingResponse.ok) {
+          const existingFollowups = await existingResponse.json();
+          const existingFollowup = existingFollowups.find(
+            (f: Followup) => f.contactId === checklistFollowup.contactId
+          );
+          
+          if (existingFollowup) {
+            // Copiar items al followup existente
+            for (const item of checklistItems) {
+              await fetch(`/api/followups/${existingFollowup.id}/checklist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  content: item.content,
+                  completed: item.completed 
+                }),
+              });
+            }
+            alert('✅ Checklist actualizada en Checks');
+            setChecklistFollowup(null);
+          } else {
+            throw new Error('No se pudo encontrar el followup en Checks');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving to checks:', error);
+      alert('Error al guardar');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleOpenEdit = (followup: Followup) => {
     setEditingFollowup(followup);
     setEditNotes(followup.notes || '');
@@ -401,16 +475,6 @@ export const FollowupListView: React.FC<FollowupListViewProps> = ({
                                     <span>Añadir a Urgente</span>
                                   </button>
                                 )}
-                                {section !== 'checks' && (
-                                  <button
-                                    onClick={() => handleCopyTo(followup, 'checks')}
-                                    disabled={isUpdating}
-                                    className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center space-x-3 disabled:opacity-50"
-                                  >
-                                    <span className="text-xl">✅</span>
-                                    <span>Añadir a Checks</span>
-                                  </button>
-                                )}
                                 {section !== 'urgent' && (
                                   <button
                                     onClick={() => handleOpenChecklist(followup)}
@@ -511,6 +575,135 @@ export const FollowupListView: React.FC<FollowupListViewProps> = ({
               >
                 {isSaving ? 'Guardando...' : 'Guardar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Checklist */}
+      {checklistFollowup && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setChecklistFollowup(null)}
+        >
+          <div 
+            className="bg-white dark:bg-[#27273F] rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">📋 Checklist</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{checklistFollowup.contactName}</p>
+              </div>
+              <button
+                onClick={() => setChecklistFollowup(null)}
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {isLoadingChecklist ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Lista de items */}
+                  <div className="space-y-2 mb-4">
+                    {checklistItems.length === 0 ? (
+                      <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                        No hay tareas aún. Añade una tarea abajo.
+                      </p>
+                    ) : (
+                      checklistItems.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl group"
+                        >
+                          <button
+                            onClick={() => handleToggleChecklistItem(item.id, !item.completed)}
+                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                              item.completed 
+                                ? 'bg-green-500 border-green-500 text-white' 
+                                : 'border-gray-300 dark:border-gray-600 hover:border-green-400'
+                            }`}
+                          >
+                            {item.completed && (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                          <span className={`flex-1 ${item.completed ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-200'}`}>
+                            {item.content}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteChecklistItem(item.id)}
+                            className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1 transition-opacity"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Formulario para añadir item */}
+                  <form onSubmit={handleAddChecklistItem} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newChecklistItem}
+                      onChange={(e) => setNewChecklistItem(e.target.value)}
+                      placeholder="Nueva tarea..."
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newChecklistItem.trim()}
+                      className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl disabled:opacity-50"
+                    >
+                      Añadir
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+              <button
+                onClick={() => setChecklistFollowup(null)}
+                className="px-6 py-2.5 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-medium"
+              >
+                Cerrar
+              </button>
+              {section !== 'checks' && (
+                <button
+                  onClick={handleSaveChecklistToChecks}
+                  disabled={isSaving || checklistItems.length === 0}
+                  className="px-6 py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl disabled:opacity-50 flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <span>✅</span>
+                      Guardar en Checks
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

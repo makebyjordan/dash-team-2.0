@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 const checklistItemSchema = z.object({
   content: z.string().min(1),
+  completed: z.boolean().optional(),
 })
 
 const updateChecklistItemSchema = z.object({
@@ -73,6 +74,7 @@ export async function POST(
       data: {
         followupId: id,
         content: validatedData.content,
+        completed: validatedData.completed || false,
       },
     })
 

@@ -12,6 +12,7 @@ import { ContactsView } from '@/components/ContactsView';
 import { ClientsListView } from '@/components/ClientsListView';
 import { FollowupListView } from '@/components/FollowupListView';
 import { FollowupCalendarView } from '@/components/FollowupCalendarView';
+import { FollowupSummaryView } from '@/components/FollowupSummaryView';
 import { AIChatModal } from '@/components/AIChatModal';
 import { initialBattlePlan, BattlePlanDay, routineWar, routineRegen } from '@/data/initialTimeGestionData';
 import { loadBattlePlans, saveBattlePlan } from '@/lib/battleplan-helpers';
@@ -579,7 +580,7 @@ export default function DashboardApp() {
       case 'tocontact':
         return <ClientsListView contactType="TO_CONTACT" title="Por Contactar" emptyMessage="No hay contactos por llamar aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
       case 'followups':
-        return <PlaceholderView title="Seguimientos" t={t} />;
+        return <FollowupSummaryView />;
       case 'urgent':
         return <FollowupListView section="urgent" title="Urgente" icon="🚨" />;
       case 'list':
