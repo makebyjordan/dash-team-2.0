@@ -1,4 +1,4 @@
-// File: /root/root/dashboard-tipo-para-copiar/app/api/sheets/route.ts
+// File: /Users/mac/Desktop/SaJor/pruebas atigravity con proyectos mios/dashteam evol/dash-team-2.0/app/api/sheets/route.ts
 import * as entry from '../../../../../app/api/sheets/route.js'
 import type { NextRequest } from 'next/server.js'
 

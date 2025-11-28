@@ -2,7 +2,7 @@ export type Language = 'en' | 'es';
 
 export const translations = {
   en: {
-    greeting: 'Hello, Daniel',
+    greeting: 'Hello,',
     subtitle: 'Check & maintain your business status.',
     aiAssistant: 'AI Assistant',
     newInvoice: 'New Invoice',
@@ -27,7 +27,7 @@ export const translations = {
     contentGoesHere: 'Content for {title} goes here. This is a placeholder page to demonstrate navigation.',
   },
   es: {
-    greeting: 'Hola, Daniel',
+    greeting: 'Hola,',
     subtitle: 'Revisa y mantén el estado de tu negocio.',
     aiAssistant: 'Asistente IA',
     newInvoice: 'Nueva Factura',
