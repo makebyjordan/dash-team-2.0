@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, XIcon } from './icons';
+import { useActivity } from '@/lib/ActivityContext';
 
 interface Transaction {
     id: string;
@@ -22,6 +23,7 @@ interface TransactionsViewProps {
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({ type, title }) => {
+    const { addActivity } = useActivity();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +91,11 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ type, title 
             if (res.ok) {
                 loadTransactions();
                 setIsModalOpen(false);
+                addActivity({
+                    type: 'create',
+                    description: `Añadió ${type === 'INCOME' ? 'entrada' : 'gasto'}: ${formData.title || formData.invoiceNumber || 'sin título'}`,
+                    category: 'transaction',
+                });
                 setFormData({
                     title: '',
                     invoiceNumber: '',
@@ -109,11 +116,17 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({ type, title 
         if (!confirm('¿Estás seguro de eliminar esta transacción?')) return;
 
         try {
+            const transaction = transactions.find(t => t.id === id);
             const res = await fetch(`/api/transactions/${id}`, {
                 method: 'DELETE',
             });
 
             if (res.ok) {
+                addActivity({
+                    type: 'delete',
+                    description: `Eliminó ${type === 'INCOME' ? 'entrada' : 'gasto'}: ${transaction?.title || transaction?.invoiceNumber || 'sin título'}`,
+                    category: 'transaction',
+                });
                 loadTransactions();
             }
         } catch (error) {

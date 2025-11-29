@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import type { ViewType } from '@/types';
 import Dashboard from '@/components/Dashboard';
@@ -11,16 +11,19 @@ import { ConnectionsView } from '@/components/ConnectionsView';
 import { ContactsView } from '@/components/ContactsView';
 import { ClientsListView } from '@/components/ClientsListView';
 import { FollowupListView } from '@/components/FollowupListView';
+import { CalendarView } from '@/components/CalendarView';
 import { AIChatModal } from '@/components/AIChatModal';
 import { SettingsView } from '@/components/SettingsView';
 import { TransactionsView } from '@/components/TransactionsView';
 import { SubscriptionsView } from '@/components/SubscriptionsView';
+import ChecksView from './ChecksView';
 import { initialBattlePlan, BattlePlanDay, routineWar, routineRegen } from '@/data/initialTimeGestionData';
 import { loadBattlePlans, saveBattlePlan } from '@/lib/battleplan-helpers';
 import {
-  DashboardIcon, PolicyIcon, SettingsIcon, LogoutIcon, SearchIcon, NotificationIcon, PlusIcon, LogoIcon, XIcon, ChecklistIcon, CalendarIcon, SparklesIcon, SunIcon, MoonIcon, ChevronRightIcon, ChevronDownIcon, StatisticsIcon
+  DashboardIcon, PolicyIcon, SettingsIcon, LogoutIcon, SearchIcon, NotificationIcon, PlusIcon, LogoIcon, XIcon, ChecklistIcon, CalendarIcon, SparklesIcon, SunIcon, MoonIcon, ChevronRightIcon, ChevronDownIcon, StatisticsIcon, MenuIcon, ChevronLeftIcon
 } from '@/components/icons';
 import { translations } from '@/translations';
+import { useActivity } from '@/lib/ActivityContext';
 
 // --- Interfaces ---
 interface NavItemConfig {
@@ -36,36 +39,38 @@ interface TranslatedTexts {
 
 interface NavItemProps {
   item: NavItemConfig;
-  activeView: ViewType;
-  onNavigate: (view: ViewType) => void;
+  activeView: string;
+  onNavigate: (view: string) => void;
   depth?: number;
   expandedSections: Set<string>;
   toggleSection: (id: string) => void;
+  isCollapsed?: boolean;
 }
 
 // --- NavItem Component ---
-const NavItem: React.FC<NavItemProps> = ({ item, activeView, onNavigate, depth = 0, expandedSections, toggleSection }) => {
+const NavItem: React.FC<NavItemProps> = ({ item, activeView, onNavigate, depth = 0, expandedSections, toggleSection, isCollapsed = false }) => {
   const hasChildren = item.children && item.children.length > 0;
   const isExpanded = expandedSections.has(item.id);
   const isExactActive = activeView === item.id;
 
   return (
-    <li className="relative">
+    <li className="relative group">
       <div
-        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isExactActive
+        className={`w-full flex items-center justify-between rounded-lg transition-colors ${isExactActive
           ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-transparent'
           : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
-          }`}
-        style={{ paddingLeft: `${depth * 1 + 1}rem` }}
+          } ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'}`}
+        style={{ paddingLeft: isCollapsed ? undefined : `${depth * 1 + 1}rem` }}
       >
         <button
-          onClick={() => onNavigate(item.id as ViewType)}
-          className="flex items-center space-x-4 flex-1 text-left"
+          onClick={() => onNavigate(item.id)}
+          className={`flex items-center flex-1 text-left ${isCollapsed ? 'justify-center' : 'space-x-4'}`}
+          title={isCollapsed ? item.label : undefined}
         >
           {item.icon}
-          <span>{item.label}</span>
+          {!isCollapsed && <span>{item.label}</span>}
         </button>
-        {hasChildren && (
+        {hasChildren && !isCollapsed && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -78,8 +83,15 @@ const NavItem: React.FC<NavItemProps> = ({ item, activeView, onNavigate, depth =
         )}
       </div>
       {isExactActive && <div className="absolute left-0 top-0 h-full w-1 bg-yellow-400 rounded-r-full"></div>}
+      
+      {/* Tooltip para modo colapsado */}
+      {isCollapsed && (
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+          {item.label}
+        </div>
+      )}
 
-      {hasChildren && isExpanded && (
+      {hasChildren && isExpanded && !isCollapsed && (
         <ul className="mt-1 space-y-1">
           {item.children!.map(child => (
             <NavItem
@@ -90,6 +102,7 @@ const NavItem: React.FC<NavItemProps> = ({ item, activeView, onNavigate, depth =
               depth={depth + 1}
               expandedSections={expandedSections}
               toggleSection={toggleSection}
+              isCollapsed={isCollapsed}
             />
           ))}
         </ul>
@@ -155,11 +168,16 @@ const AddConnectionModal: React.FC<{ isOpen: boolean; onClose: () => void; onCon
 // --- Sidebar Component ---
 const Sidebar: React.FC<{
   activeView: ViewType;
-  setActiveView: React.Dispatch<React.SetStateAction<ViewType>>;
+  setActiveView: (view: ViewType) => void;
   onAddNewInvoice: () => void;
   t: TranslatedTexts;
   onLogout: () => void;
-}> = ({ activeView, setActiveView, onAddNewInvoice, t, onLogout }) => {
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  connectedSheets: { id: string; name: string }[];
+  onSelectSheet: (sheetId: string) => void;
+  selectedSheetId: string | null;
+}> = ({ activeView, setActiveView, onAddNewInvoice, t, onLogout, isCollapsed, onToggleCollapse, connectedSheets, onSelectSheet, selectedSheetId }) => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   const toggleSection = (id: string) => {
@@ -171,6 +189,15 @@ const Sidebar: React.FC<{
     }
     setExpandedSections(newExpanded);
   };
+
+  // Generar children dinámicos para Conexiones basado en hojas conectadas
+  const connectionChildren: NavItemConfig[] = connectedSheets.length > 0
+    ? connectedSheets.map(sheet => ({
+        id: `sheet_${sheet.id}`,
+        label: sheet.name || 'Sin nombre',
+        icon: <DashboardIcon className="w-5 h-5" />,
+      }))
+    : [{ id: 'gsheets', label: 'Conectar GSheet', icon: <DashboardIcon className="w-5 h-5" /> }];
 
   const navItems: NavItemConfig[] = [
     { id: 'dashboard', label: t.dashboard, icon: <DashboardIcon className="w-5 h-5" /> },
@@ -198,9 +225,7 @@ const Sidebar: React.FC<{
       id: 'connections',
       label: 'Conexiones',
       icon: <SparklesIcon className="w-5 h-5" />,
-      children: [
-        { id: 'gsheets', label: 'GSheets', icon: <DashboardIcon className="w-5 h-5" /> }
-      ]
+      children: connectionChildren
     },
     {
       id: 'contacts',
@@ -209,7 +234,8 @@ const Sidebar: React.FC<{
       children: [
         { id: 'clients', label: 'Clientes', icon: <DashboardIcon className="w-5 h-5" /> },
         { id: 'interested', label: 'Interesados', icon: <DashboardIcon className="w-5 h-5" /> },
-        { id: 'tocontact', label: 'Contactar', icon: <DashboardIcon className="w-5 h-5" /> }
+        { id: 'tocontact', label: 'Contactar', icon: <DashboardIcon className="w-5 h-5" /> },
+        { id: 'vault', label: 'Baúl', icon: <DashboardIcon className="w-5 h-5" /> }
       ]
     },
     {
@@ -225,31 +251,60 @@ const Sidebar: React.FC<{
     }
   ];
 
-  const showNewConnection = activeView === 'connections';
+  // Handler especial para navegación que detecta hojas
+  const handleNavigation = (viewId: string) => {
+    if (viewId.startsWith('sheet_')) {
+      const sheetId = viewId.replace('sheet_', '');
+      onSelectSheet(sheetId);
+      setActiveView('gsheets' as ViewType);
+    } else {
+      onSelectSheet('');
+      setActiveView(viewId as ViewType);
+    }
+  };
+
+  // Determinar qué vista está activa (para resaltar hojas correctamente)
+  const getActiveView = () => {
+    if (activeView === 'gsheets' && selectedSheetId) {
+      return `sheet_${selectedSheetId}`;
+    }
+    return activeView;
+  };
+
+  const showNewConnection = activeView === 'connections' && !isCollapsed;
 
   return (
-    <aside className="w-64 bg-white dark:bg-[#27273F] text-gray-900 dark:text-white p-6 flex-shrink-0 flex flex-col h-full border-r border-gray-200 dark:border-none overflow-y-auto">
-      <div className="mb-10">
-        <LogoIcon />
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-[#27273F] text-gray-900 dark:text-white flex-shrink-0 flex flex-col h-full border-r border-gray-200 dark:border-none overflow-y-auto transition-all duration-300`}>
+      {/* Header con logo y botón de colapsar */}
+      <div className={`flex items-center justify-between ${isCollapsed ? 'p-4' : 'p-6'} mb-4`}>
+        {!isCollapsed && <LogoIcon />}
+        <button
+          onClick={onToggleCollapse}
+          className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
+          title={isCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+        >
+          {isCollapsed ? <MenuIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
+        </button>
       </div>
 
-      <nav className="flex-grow">
+      <nav className={`flex-grow ${isCollapsed ? 'px-2' : 'px-4'}`}>
         <ul className="space-y-1">
           {navItems.map(item => (
             <NavItem
               key={item.id}
               item={item}
-              activeView={activeView}
-              onNavigate={setActiveView}
+              activeView={getActiveView()}
+              onNavigate={handleNavigation}
               expandedSections={expandedSections}
               toggleSection={toggleSection}
+              isCollapsed={isCollapsed}
             />
           ))}
         </ul>
       </nav>
 
       {showNewConnection && (
-        <div className="bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6 animate-fade-in">
+        <div className="mx-4 bg-purple-100 dark:bg-purple-900/30 p-5 rounded-2xl text-center mb-6 animate-fade-in">
           <div className="w-16 h-16 bg-purple-200 dark:bg-purple-500/50 rounded-full mx-auto flex items-center justify-center -mt-10 mb-4">
             <PlusIcon className="w-8 h-8 text-purple-700 dark:text-white" />
           </div>
@@ -263,18 +318,32 @@ const Sidebar: React.FC<{
         </div>
       )}
 
-      <div>
+      <div className={`${isCollapsed ? 'px-2' : 'px-4'} pb-4`}>
         <button
-          onClick={() => setActiveView('settings')}
-          className={`w-full flex items-center space-x-4 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent rounded-lg ${activeView === 'settings' ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white' : ''}`}>
+          onClick={() => handleNavigation('settings')}
+          className={`w-full flex items-center rounded-lg group relative ${isCollapsed ? 'justify-center px-3 py-3' : 'space-x-4 px-4 py-3'} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent ${activeView === 'settings' ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white' : ''}`}
+          title={isCollapsed ? t.settings : undefined}
+        >
           <SettingsIcon className="w-5 h-5" />
-          <span>{t.settings}</span>
+          {!isCollapsed && <span>{t.settings}</span>}
+          {isCollapsed && (
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              {t.settings}
+            </div>
+          )}
         </button>
         <button
           onClick={onLogout}
-          className="w-full flex items-center space-x-4 px-4 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent rounded-lg">
+          className={`w-full flex items-center rounded-lg group relative ${isCollapsed ? 'justify-center px-3 py-3' : 'space-x-4 px-4 py-3'} text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-transparent`}
+          title={isCollapsed ? t.logout : undefined}
+        >
           <LogoutIcon className="w-5 h-5" />
-          <span>{t.logout}</span>
+          {!isCollapsed && <span>{t.logout}</span>}
+          {isCollapsed && (
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+              {t.logout}
+            </div>
+          )}
         </button>
       </div>
     </aside>
@@ -344,9 +413,37 @@ const PlaceholderView: React.FC<{ title: string; t: TranslatedTexts }> = ({ titl
   </div>
 );
 
+// --- View Labels for Activity Tracking ---
+const viewLabels: Record<ViewType, string> = {
+  dashboard: 'Dashboard',
+  invoices: 'Facturas',
+  timegestion: 'Gestión de Tiempo',
+  habits: 'Hábitos',
+  connections: 'Conexiones',
+  gsheets: 'Google Sheets',
+  contacts: 'Contactos',
+  clients: 'Clientes',
+  interested: 'Interesados',
+  tocontact: 'Por Contactar',
+  vault: 'Baúl',
+  followups: 'Seguimientos',
+  urgent: 'Urgente',
+  list: 'Lista',
+  calendar: 'Calendario',
+  checks: 'Checks',
+  settings: 'Ajustes',
+  income: 'Entradas',
+  expense: 'Salidas',
+  subscriptions_ai: 'Suscripciones IA',
+  subscriptions_tech: 'Pagos Tech',
+  mycalendar: 'Mi Calendario',
+  cartera: 'Cartera',
+};
+
 // --- Main DashboardApp Component ---
 export default function DashboardApp() {
   const { data: session } = useSession();
+  const { addActivity } = useActivity();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [battlePlan, setBattlePlan] = useState<BattlePlanDay[]>(initialBattlePlan);
@@ -358,6 +455,38 @@ export default function DashboardApp() {
   const [connectedSheets, setConnectedSheets] = useState<{ id: string; name: string; data: string[][] }[]>([]);
   const [gsheetLoading, setGsheetLoading] = useState(false);
   const [gsheetError, setGsheetError] = useState<string | null>(null);
+  const [selectedSheetId, setSelectedSheetId] = useState<string | null>(null);
+  
+  // Estado para sidebar colapsado - colapsado por defecto en móvil/tablet
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  // Detectar tamaño de pantalla al inicio y en resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      // Colapsar en pantallas menores a 1024px (tablet y móvil)
+      setIsSidebarCollapsed(window.innerWidth < 1024);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+  
+  const toggleSidebarCollapse = useCallback(() => {
+    setIsSidebarCollapsed(prev => !prev);
+  }, []);
+
+  // Handler para navegación con tracking de actividad
+  const handleNavigate = useCallback((view: ViewType) => {
+    if (view !== activeView) {
+      addActivity({
+        type: 'navigate',
+        description: `Navegó a ${viewLabels[view] || view}`,
+        category: 'navigation',
+      });
+    }
+    setActiveView(view);
+  }, [activeView, addActivity]);
 
   // Cargar battleplans y sheets desde la API al inicio
   useEffect(() => {
@@ -396,12 +525,18 @@ export default function DashboardApp() {
 
   const handleDisconnectSheet = async (id: string) => {
     try {
+      const sheet = connectedSheets.find(s => s.id === id);
       const response = await fetch(`/api/sheets?sheetId=${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         setConnectedSheets(prev => prev.filter(sheet => sheet.id !== id));
+        addActivity({
+          type: 'delete',
+          description: `Desconectó hoja "${sheet?.name || id}"`,
+          category: 'sheet',
+        });
       } else {
         console.error('Error disconnecting sheet');
       }
@@ -506,6 +641,12 @@ export default function DashboardApp() {
         throw new Error('No se pudo conectar con la hoja. Asegúrate de que esté "Publicada en la web".');
       }
 
+      addActivity({
+        type: 'connect',
+        description: `Conectó nueva hoja de Google Sheets`,
+        category: 'sheet',
+      });
+
     } catch (err: any) {
       setGsheetError(err.message || 'Error al conectar con Google Sheets');
     } finally {
@@ -524,6 +665,12 @@ export default function DashboardApp() {
         for (const updatedDay of updatedDays) {
           await saveBattlePlan(updatedDay.day, updatedDay);
         }
+        
+        addActivity({
+          type: 'update',
+          description: `Actualizó plan para ${updatedDays.length} día(s)`,
+          category: 'battleplan',
+        });
       } catch (error) {
         console.error('Error saving battle plan:', error);
       }
@@ -570,18 +717,34 @@ export default function DashboardApp() {
             sheets={connectedSheets}
             onConnect={() => setIsModalOpen(true)}
             onDisconnect={handleDisconnectSheet}
-            onViewSheet={(id) => setActiveView('gsheets')}
+            onViewSheet={(id) => {
+              setSelectedSheetId(id);
+              setActiveView('gsheets');
+            }}
           />
         );
       case 'gsheets':
+        // Filtrar para mostrar solo la hoja seleccionada o todas si no hay selección
+        const sheetsToShow = selectedSheetId 
+          ? connectedSheets.filter(s => s.id === selectedSheetId)
+          : connectedSheets;
+        const selectedSheetName = selectedSheetId 
+          ? connectedSheets.find(s => s.id === selectedSheetId)?.name 
+          : undefined;
         return (
           <GSheetsView
-            sheets={connectedSheets}
+            sheets={sheetsToShow}
             isLoading={gsheetLoading}
             error={gsheetError}
             onConnect={() => setIsModalOpen(true)}
-            onDisconnect={handleDisconnectSheet}
+            onDisconnect={(id) => {
+              handleDisconnectSheet(id);
+              if (selectedSheetId === id) {
+                setSelectedSheetId(null);
+              }
+            }}
             onSync={syncSheetData}
+            title={selectedSheetName}
           />
         );
       case 'contacts':
@@ -592,16 +755,18 @@ export default function DashboardApp() {
         return <ClientsListView contactType="INTERESTED" title="Interesados" emptyMessage="No hay interesados registrados aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
       case 'tocontact':
         return <ClientsListView contactType="TO_CONTACT" title="Por Contactar" emptyMessage="No hay contactos por llamar aún. Los contactos copiados desde Google Sheets aparecerán aquí." />;
+      case 'vault':
+        return <ClientsListView contactType="VAULT" title="📦 Baúl" emptyMessage="No hay contactos en el baúl. Mueve contactos aquí para archivarlos." />;
       case 'followups':
-        return <PlaceholderView title="Seguimientos" t={t} />;
+        return <FollowupListView section="list" title="📋 Todos los Seguimientos" />;
       case 'urgent':
-        return <PlaceholderView title="Urgente" t={t} />;
+        return <FollowupListView section="urgent" />;
       case 'list':
-        return <FollowupListView />;
+        return <FollowupListView section="list" />;
       case 'calendar':
-        return <PlaceholderView title="Calendario" t={t} />;
+        return <CalendarView />;
       case 'checks':
-        return <PlaceholderView title="Checks" t={t} />;
+        return <ChecksView />;
       case 'settings':
         return <SettingsView />;
       case 'income':
@@ -622,10 +787,15 @@ export default function DashboardApp() {
       <div className="h-full w-full font-sans flex bg-gray-50 dark:bg-[#1C1C2E] text-gray-900 dark:text-gray-300 overflow-hidden">
         <Sidebar
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={handleNavigate}
           onAddNewInvoice={() => setIsModalOpen(true)}
           t={t}
           onLogout={() => signOut()}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebarCollapse}
+          connectedSheets={connectedSheets}
+          onSelectSheet={setSelectedSheetId}
+          selectedSheetId={selectedSheetId}
         />
         <main className="flex-1 h-full overflow-y-auto relative">
           <Header

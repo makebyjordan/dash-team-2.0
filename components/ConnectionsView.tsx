@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon, XIcon } from './icons';
 
 interface ConnectedSheet {
   id: string;
   name: string;
   data: string[][];
+}
+
+interface SheetStats {
+  contacts: number;
+  followups: number;
 }
 
 interface ConnectionsViewProps {
@@ -15,6 +20,26 @@ interface ConnectionsViewProps {
 }
 
 export const ConnectionsView: React.FC<ConnectionsViewProps> = ({ sheets, onConnect, onDisconnect, onViewSheet }) => {
+  const [sheetStats, setSheetStats] = useState<Record<string, SheetStats>>({});
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/sheets/stats');
+        if (res.ok) {
+          const stats = await res.json();
+          setSheetStats(stats);
+        }
+      } catch (error) {
+        console.error('Error fetching sheet stats:', error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [sheets]);
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
@@ -90,14 +115,30 @@ export const ConnectionsView: React.FC<ConnectionsViewProps> = ({ sheets, onConn
 
                 {/* Body */}
                 <div className="p-6">
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Filas</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{rowCount.toLocaleString()}</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">{rowCount.toLocaleString()}</p>
                     </div>
-                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Columnas</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{columnCount}</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">{columnCount}</p>
+                    </div>
+                  </div>
+
+                  {/* Estadísticas de exportación */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">📋 En Contactos</p>
+                      <p className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                        {loadingStats ? '...' : (sheetStats[sheet.id]?.contacts || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mb-1">🔔 En Seguimientos</p>
+                      <p className="text-xl font-bold text-purple-700 dark:text-purple-300">
+                        {loadingStats ? '...' : (sheetStats[sheet.id]?.followups || 0)}
+                      </p>
                     </div>
                   </div>
 

@@ -67,7 +67,7 @@ const TimeGestion: React.FC<TimeGestionProps> = ({ battlePlan, baseRoutineWar, b
         {activeTab === 'diario' && (
           <div className="bg-white dark:bg-[#27273F] rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in transition-colors duration-300">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Guía de Referencia Rápida</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Esta es la estructura base. Para ejecutar y marcar tareas, ve a la pestaña <strong>"Calendario de Batalla"</strong>.</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Esta es la estructura base. Para ejecutar y marcar tareas, ve a la pestaña <strong>&ldquo;Calendario de Batalla&rdquo;</strong>.</p>
             
             <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -316,7 +316,7 @@ const TimeGestion: React.FC<TimeGestionProps> = ({ battlePlan, baseRoutineWar, b
                 <div className="bg-white dark:bg-[#1C1C2E] p-4 rounded-lg border border-red-200 dark:border-red-800/30">
                     <span className="block text-2xl mb-2">🗣️</span>
                     <strong className="text-gray-900 dark:text-white">1. Habla:</strong> 
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Dile a los socios "No me dejéis solo".</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Dile a los socios &ldquo;No me dejéis solo&rdquo;.</p>
                 </div>
                 <div className="bg-white dark:bg-[#1C1C2E] p-4 rounded-lg border border-red-200 dark:border-red-800/30">
                     <span className="block text-2xl mb-2">💳</span>

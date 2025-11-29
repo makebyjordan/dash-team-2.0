@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, XIcon } from './icons';
+import { useActivity } from '@/lib/ActivityContext';
 
 interface Subscription {
     id: string;
@@ -22,6 +23,7 @@ interface SubscriptionsViewProps {
 }
 
 export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({ category, title }) => {
+    const { addActivity } = useActivity();
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -86,6 +88,11 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({ category, 
             if (res.ok) {
                 loadSubscriptions();
                 setIsModalOpen(false);
+                addActivity({
+                    type: 'create',
+                    description: `Añadió suscripción: ${formData.title || 'sin título'}`,
+                    category: 'subscription',
+                });
                 setFormData({
                     title: '',
                     description: '',
@@ -110,6 +117,12 @@ export const SubscriptionsView: React.FC<SubscriptionsViewProps> = ({ category, 
             });
 
             if (res.ok) {
+                const sub = subscriptions.find(s => s.id === id);
+                addActivity({
+                    type: 'delete',
+                    description: `Eliminó suscripción: ${sub?.title || 'sin título'}`,
+                    category: 'subscription',
+                });
                 loadSubscriptions();
             }
         } catch (error) {

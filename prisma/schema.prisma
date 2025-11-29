@@ -110,30 +110,37 @@ enum PlanType {
 
 // Contacts Management
 model Contact {
-  id          String        @id @default(cuid())
-  userId      String
-  name        String
-  email       String?
-  phone       String?
-  company     String?
-  type        ContactType
-  status      ContactStatus @default(ACTIVE)
-  notes       String?       @db.Text
-  lastContact DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  userId        String
+  name          String
+  email         String?
+  phone         String?
+  company       String?
+  type          ContactType
+  status        ContactStatus @default(ACTIVE)
+  notes         String?       @db.Text
+  lastContact   DateTime?
+  sourceSheetId String?       // ID de la hoja de origen si viene de GSheets
+  scheduledDate DateTime?     // Fecha programada para acción
+  actionType    ActionType?   // Tipo de acción: llamar, mail, otros
+  checklist     Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
   @@index([status])
+  @@index([sourceSheetId])
+  @@index([scheduledDate])
 }
 
 enum ContactType {
   CLIENT
   INTERESTED
   TO_CONTACT
+  VAULT
 }
 
 enum ContactStatus {
@@ -141,6 +148,12 @@ enum ContactStatus {
   PENDING
   URGENT
   INACTIVE
+}
+
+enum ActionType {
+  CALL
+  EMAIL
+  OTHER
 }
 
 // Google Sheets Connections
@@ -180,25 +193,30 @@ enum InvoiceStatus {
 
 // Followups (Seguimientos)
 model Followup {
-  id            String    @id @default(cuid())
-  userId        String
-  contactId     String
-  contactName   String
-  contactEmail  String?
-  contactPhone  String?
+  id             String    @id @default(cuid())
+  userId         String
+  contactId      String
+  contactName    String
+  contactEmail   String?
+  contactPhone   String?
   contactCompany String?
-  section       FollowupSection
-  notes         String?   @db.Text
-  dueDate       DateTime?
-  completed     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  section        FollowupSection
+  notes          String?   @db.Text
+  dueDate        DateTime?
+  completed      Boolean   @default(false)
+  sourceSheetId  String?   // ID de la hoja de origen si viene de GSheets
+  scheduledDate  DateTime? // Fecha programada para acción
+  actionType     ActionType? // Tipo de acción: llamar, mail, otros
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([section])
   @@index([completed])
+  @@index([sourceSheetId])
+  @@index([scheduledDate])
 }
 
 enum FollowupSection {

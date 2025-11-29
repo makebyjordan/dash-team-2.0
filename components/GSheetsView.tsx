@@ -15,6 +15,7 @@ interface GSheetsViewProps {
   onConnect: () => void;
   onDisconnect: (id: string) => void;
   onSync?: (id: string, name: string) => Promise<boolean>;
+  title?: string;
 }
 
 // Row Actions Menu Component
@@ -111,7 +112,7 @@ const RowActionsMenu: React.FC<RowActionsMenuProps> = ({ rowData, headers, onCop
   );
 };
 
-export const GSheetsView: React.FC<GSheetsViewProps> = ({ sheets, isLoading, error, onConnect, onDisconnect, onSync }) => {
+export const GSheetsView: React.FC<GSheetsViewProps> = ({ sheets, isLoading, error, onConnect, onDisconnect, onSync, title }) => {
   const { data: session } = useSession();
   const [activeSheetId, setActiveSheetId] = useState<string | null>(sheets.length > 0 ? sheets[0].id : null);
   const [copyStatus, setCopyStatus] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -205,6 +206,7 @@ export const GSheetsView: React.FC<GSheetsViewProps> = ({ sheets, isLoading, err
         company,
         type: typeMap[section],
         notes: `Importado desde Google Sheets\n\nDatos originales:\n${JSON.stringify(data, null, 2)}`,
+        sourceSheetId: activeSheetId || undefined,
       };
 
       const response = await fetch('/api/contacts', {
@@ -313,7 +315,7 @@ export const GSheetsView: React.FC<GSheetsViewProps> = ({ sheets, isLoading, err
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <span className="text-3xl">📊</span>
-            Hojas Conectadas
+            {title || 'Hojas Conectadas'}
             {isSyncing && (
               <span className="ml-3 text-sm font-normal text-yellow-500 animate-pulse flex items-center gap-1">
                 <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>

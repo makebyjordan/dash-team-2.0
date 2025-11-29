@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusIcon } from './icons';
+import { useActivity } from '@/lib/ActivityContext';
+import type { ChecklistItem } from '@/types';
+import ContactChecklistModal from './ContactChecklistModal';
 
 interface Contact {
   id: string;
@@ -15,24 +18,56 @@ interface Contact {
   lastContact: string | null;
   createdAt: string;
   updatedAt: string;
+  sourceSheetId?: string | null;
+  scheduledDate?: string | null;
+  actionType?: string | null;
+  checklist?: ChecklistItem[] | null;
 }
 
 interface ClientsListViewProps {
-  contactType: 'CLIENT' | 'INTERESTED' | 'TO_CONTACT';
+  contactType: 'CLIENT' | 'INTERESTED' | 'TO_CONTACT' | 'VAULT';
   title: string;
   emptyMessage: string;
 }
 
+const contactSections = [
+  { id: 'CLIENT', label: 'Clientes', icon: '👥' },
+  { id: 'INTERESTED', label: 'Interesados', icon: '🎯' },
+  { id: 'TO_CONTACT', label: 'Contactar', icon: '📞' },
+  { id: 'VAULT', label: 'Baúl', icon: '📦' },
+];
+
+const followupSections = [
+  { id: 'urgent', label: 'Urgente', icon: '🔴' },
+  { id: 'list', label: 'Lista', icon: '📝' },
+  { id: 'calendar', label: 'Calendario', icon: '📅' },
+  { id: 'checks', label: 'Checks', icon: '✅' },
+];
+
 export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, title, emptyMessage }) => {
+  const { addActivity } = useActivity();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [addingToFollowup, setAddingToFollowup] = useState(false);
+  const [actionInProgress, setActionInProgress] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    status: 'ACTIVE',
+    scheduledDate: '',
+    actionType: '',
+  });
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [checklistContact, setChecklistContact] = useState<Contact | null>(null);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
 
   useEffect(() => {
     fetchContacts();
@@ -69,6 +104,13 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
       if (!response.ok) {
         throw new Error('Error al eliminar contacto');
       }
+
+      const contact = contacts?.find(c => c.id === id);
+      addActivity({
+        type: 'delete',
+        description: `Eliminó contacto: ${contact?.name || 'sin nombre'}`,
+        category: 'contact',
+      });
 
       // Refresh the list
       fetchContacts();
@@ -116,35 +158,172 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
     }
   };
 
-  const handleAddToFollowup = async (contact: Contact) => {
+  const handleOpenEdit = (contact: Contact) => {
+    setSelectedContact(contact);
+    setEditFormData({
+      name: contact.name,
+      email: contact.email || '',
+      phone: contact.phone || '',
+      company: contact.company || '',
+      status: contact.status,
+      scheduledDate: contact.scheduledDate ? contact.scheduledDate.split('T')[0] : '',
+      actionType: contact.actionType || '',
+    });
+    setIsEditModalOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedContact) return;
+
     try {
-      setAddingToFollowup(true);
+      setIsSaving(true);
+      const response = await fetch(`/api/contacts/${selectedContact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (!response.ok) throw new Error('Error al guardar');
+
+      addActivity({
+        type: 'update',
+        description: `Editó contacto: ${editFormData.name}`,
+        category: 'contact',
+      });
+
+      fetchContacts();
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error('Error saving contact:', error);
+      alert('Error al guardar el contacto');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fetchContactChecklist = async (contactId: string) => {
+    try {
+      const response = await fetch(`/api/contacts/${contactId}`);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching contact checklist:', error);
+      return null;
+    }
+  };
+
+  const handleOpenChecklist = async (contact: Contact) => {
+    setChecklistContact(contact);
+    setChecklistItems((contact.checklist || []) as ChecklistItem[]);
+    setIsChecklistModalOpen(true);
+
+    const fullContact = await fetchContactChecklist(contact.id);
+    if (fullContact) {
+      setChecklistContact(fullContact);
+      setChecklistItems((fullContact.checklist || []) as ChecklistItem[]);
+    }
+  };
+
+  const closeChecklistModal = () => {
+    setIsChecklistModalOpen(false);
+    setChecklistContact(null);
+  };
+
+  const persistChecklist = async (contactId: string, items: ChecklistItem[]) => {
+    const response = await fetch(`/api/contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checklist: items }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al guardar la checklist');
+    }
+
+    const updated = await response.json();
+    setContacts(prev => prev.map(c =>
+      c.id === contactId ? { ...c, checklist: (updated.checklist || []) as ChecklistItem[] } : c
+    ));
+  };
+
+  const handleSaveChecklist = async (items: ChecklistItem[]) => {
+    if (!checklistContact) return;
+    await persistChecklist(checklistContact.id, items);
+  };
+
+  const handleDeleteChecklist = async () => {
+    if (!checklistContact) return;
+    await persistChecklist(checklistContact.id, []);
+  };
+
+  const handleCopyToContact = async (contact: Contact, targetType: string) => {
+    if (targetType === contactType) {
+      alert('El contacto ya está en esta sección');
+      return;
+    }
+
+    try {
+      setActionInProgress(true);
+      const response = await fetch(`/api/contacts/${contact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: targetType }),
+      });
+
+      if (!response.ok) throw new Error('Error al mover contacto');
+
+      const targetLabel = contactSections.find(s => s.id === targetType)?.label || targetType;
+      addActivity({
+        type: 'update',
+        description: `Movió "${contact.name}" a ${targetLabel}`,
+        category: 'contact',
+      });
+
+      fetchContacts();
+      setOpenMenuId(null);
+      alert(`✅ ${contact.name} movido a ${targetLabel}`);
+    } catch (error) {
+      console.error('Error moving contact:', error);
+      alert('Error al mover el contacto');
+    } finally {
+      setActionInProgress(false);
+    }
+  };
+
+  const handleCopyToFollowup = async (contact: Contact, section: string) => {
+    try {
+      setActionInProgress(true);
       const response = await fetch('/api/followups', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contactId: contact.id,
           contactName: contact.name,
           contactEmail: contact.email,
           contactPhone: contact.phone,
           contactCompany: contact.company,
-          section: 'list',
+          section: section,
+          sourceSheetId: contact.sourceSheetId,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Error al añadir a seguimientos');
-      }
+      if (!response.ok) throw new Error('Error al añadir a seguimientos');
 
-      alert(`✅ ${contact.name} añadido a Seguimientos > Lista`);
+      const sectionLabel = followupSections.find(s => s.id === section)?.label || section;
+      addActivity({
+        type: 'create',
+        description: `Añadió "${contact.name}" a Seguimientos > ${sectionLabel}`,
+        category: 'contact',
+      });
+
       setOpenMenuId(null);
-    } catch (error: any) {
+      alert(`✅ ${contact.name} añadido a Seguimientos > ${sectionLabel}`);
+    } catch (error) {
       console.error('Error adding to followup:', error);
       alert('Error al añadir a seguimientos');
     } finally {
-      setAddingToFollowup(false);
+      setActionInProgress(false);
     }
   };
 
@@ -299,7 +478,7 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
                           </svg>
                         </button>
                         
-                        {/* Menú de tres puntos */}
+                        {/* Menú de acciones */}
                         <div className="relative">
                           <button
                             onClick={() => setOpenMenuId(openMenuId === contact.id ? null : contact.id)}
@@ -320,16 +499,60 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
                           {openMenuId === contact.id && (
                             <>
                               <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)}></div>
-                              <div className="absolute right-0 mt-2 w-56 bg-white/95 dark:bg-[#1C1C2E]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-600/50 z-50 overflow-hidden">
-                                <div className="py-2">
+                              <div className="absolute right-0 mt-2 w-64 bg-white/95 dark:bg-[#1C1C2E]/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-600/50 z-50 overflow-hidden max-h-[400px] overflow-y-auto">
+                                {/* Editar */}
+                                <div className="p-2 border-b border-gray-200 dark:border-gray-700">
                                   <button
-                                    onClick={() => handleAddToFollowup(contact)}
-                                    disabled={addingToFollowup}
-                                    className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center space-x-3 disabled:opacity-50"
+                                    onClick={() => handleOpenEdit(contact)}
+                                    disabled={actionInProgress}
+                                    className="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center space-x-3 disabled:opacity-50"
                                   >
-                                    <span className="text-xl">📝</span>
-                                    <span>Añadir a Seguimientos</span>
+                                    <span className="text-lg">✏️</span>
+                                    <span>Editar contacto</span>
                                   </button>
+                                </div>
+
+                                <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                                  <button
+                                    onClick={() => handleOpenChecklist(contact)}
+                                    disabled={actionInProgress}
+                                    className="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors flex items-center space-x-3 disabled:opacity-50"
+                                  >
+                                    <span className="text-lg">📝</span>
+                                    <span>Hacer checklist</span>
+                                  </button>
+                                </div>
+
+                                {/* Mover a Contactos */}
+                                <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+                                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Mover a Contactos</p>
+                                  {contactSections.filter(s => s.id !== contactType).map(section => (
+                                    <button
+                                      key={section.id}
+                                      onClick={() => handleCopyToContact(contact, section.id)}
+                                      disabled={actionInProgress}
+                                      className="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg transition-colors flex items-center space-x-3 disabled:opacity-50"
+                                    >
+                                      <span className="text-lg">{section.icon}</span>
+                                      <span>{section.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+
+                                {/* Copiar a Seguimientos */}
+                                <div className="p-2">
+                                  <p className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Copiar a Seguimientos</p>
+                                  {followupSections.map(section => (
+                                    <button
+                                      key={section.id}
+                                      onClick={() => handleCopyToFollowup(contact, section.id)}
+                                      disabled={actionInProgress}
+                                      className="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors flex items-center space-x-3 disabled:opacity-50"
+                                    >
+                                      <span className="text-lg">{section.icon}</span>
+                                      <span>{section.label}</span>
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             </>
@@ -415,6 +638,149 @@ export const ClientsListView: React.FC<ClientsListViewProps> = ({ contactType, t
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Edición */}
+      {isEditModalOpen && selectedContact && (
+        <div 
+          className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setIsEditModalOpen(false)}
+        >
+          <div 
+            className="bg-white dark:bg-[#27273F] rounded-2xl shadow-2xl w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Editar Contacto</h2>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-white p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+                <input
+                  type="text"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresa</label>
+                <input
+                  type="text"
+                  value={editFormData.company}
+                  onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                >
+                  <option value="ACTIVE">Activo</option>
+                  <option value="PENDING">Pendiente</option>
+                  <option value="URGENT">Urgente</option>
+                </select>
+              </div>
+
+              {/* Programar acción */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📅 Programar Acción</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={editFormData.scheduledDate}
+                      onChange={(e) => setEditFormData({ ...editFormData, scheduledDate: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+                    <select
+                      value={editFormData.actionType}
+                      onChange={(e) => setEditFormData({ ...editFormData, actionType: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-[#1C1C2E] border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    >
+                      <option value="">Sin acción</option>
+                      <option value="CALL">📞 Llamar</option>
+                      <option value="EMAIL">✉️ Email</option>
+                      <option value="OTHER">📝 Otros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1C1C2E]/50 rounded-b-2xl flex justify-end space-x-3">
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold py-2 px-6 rounded-lg transition-colors"
+                disabled={isSaving}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving || !editFormData.name.trim()}
+                className="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <span>Guardar Cambios</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {checklistContact && (
+        <ContactChecklistModal
+          isOpen={isChecklistModalOpen}
+          contactName={checklistContact.name}
+          initialItems={checklistItems}
+          onClose={closeChecklistModal}
+          onSave={handleSaveChecklist}
+          onDeleteChecklist={handleDeleteChecklist}
+        />
       )}
     </div>
   );
