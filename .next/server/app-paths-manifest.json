@@ -1,9 +1,9 @@
 {
   "/page": "app/page.js",
   "/api/battleplans/route": "app/api/battleplans/route.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/sheets/route": "app/api/sheets/route.js",
-  "/api/followups/route": "app/api/followups/route.js",
-  "/api/sheets/stats/route": "app/api/sheets/stats/route.js",
+  "/api/calendar/route": "app/api/calendar/route.js",
   "/api/contacts/route": "app/api/contacts/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js"
+  "/api/followups/route": "app/api/followups/route.js"
 }
